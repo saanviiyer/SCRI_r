@@ -6,11 +6,12 @@ library(tidyr)
 library(ggplot2)
 
 install.packages("ggpmisc")
-
+install.packages("broom")
+library(broom)
 library(ggpmisc)
 library(nlme)
 
-basepath <- "/Users/saanviiyer/PRINT OPTICS/STUDY/SCRI_r/LogOdds_Plots_Astrocytes/"
+basepath <- "/Users/saanviiyer/Documents/GitHub/SCRI_r/LogOdds_Plots_Astrocytes/"
 
 # create integrated object
 
@@ -58,49 +59,117 @@ day115_125_gene_expression_data$cellid <- NULL
 count <- unique(day115_125_gene_expression_data[,1])
 count_df <- data.frame(count=count, percent=rep(NA, length(count)), logodds=rep(NA,length(count)))
 
+rsq_df <- data.frame(gene=colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_expression_data) != "Main_cluster_name"],
+                     rsquare=rep(NA, 2000))
 
-for (gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_expression_data) != "Main_cluster_name"][1:101]) {
-  # n_astro_list <- c()
+for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_expression_data) != "Main_cluster_name"][1:100]){
+  
   message(gene)
+  
   count <- unique(day115_125_gene_expression_data[,gene])
   
-  count_df = data.frame(count=count, 
-                        percent = rep(NA, length(count)), 
-                        logodds= rep(NA, length(count)))
+  count_df <- data.frame("count" = count, percent = rep(0, length(count)), logodds = rep(0, length(count)))
   
-  message("Count_df created")
+  message('Count df created')
+  
   for(n in unique(count_df$count)){
     # count for all astrocytes
     n_astrocytes <- sum(day115_125_gene_expression_data[day115_125_gene_expression_data$Main_cluster_name == "Astrocytes",gene]==n)
-  
+    
     # probability of a cell being an astrocyte
     # number of astrocytes w unique count value for spp1 / all cells
     percent <- n_astrocytes/ sum(day115_125_gene_expression_data[,gene]==n)
-  
+    
     # log odds
     logodds <- log(percent/(1-percent))
-  
+    
     # adding all variables to count_df
     count_df[count_df$count == n, "percent"] <- percent
     count_df[count_df$count == n, "logodds"] <- logodds
   }
   # print(count_df)
   # table(count_df$logodds==-Inf)
-
-  count_df <- count_df[count_df$logodds != -Inf, ]
   
-  if(nrow(count_df) >= 20) {
-    plot <- ggplot(count_df, aes(x = count, y = logodds)) + 
-      geom_point(stat = "identity") + 
-      geom_smooth(method = "lm") + 
-      ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) +
-      stat_poly_eq(use_label(c("eq", "R2")))
+  count_df <- count_df[count_df$logodds != -Inf, ]
+  count_df <- count_df[count_df$logodds != Inf, ]
+  if(nrow(count_df) >= 20){
     
-  # saveRDS(plot, paste0(basepath, gene, ".RDS"))
-    saveRDS(plot, paste0(basepath, "plot.RDS"))
     
-    png(paste0(basepath, gene, ".png"), width=300, height=300)
-    print(plot)
-    dev.off()
-  } 
+    model <- lm(logodds ~ count, data = count_df)
+    model_summary <- glance(model)
+    r_squared <- model_summary$r.squared
+    
+    rsq_df[rsq_df$gene==gene, "rsquare"] <- r_squared
+    
+    # plot <- ggplot(count_df, aes(x = count, y = logodds)) +
+    #   geom_point(stat = "identity") + geom_smooth(method = "lm") +
+    #   ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
+    # 
+    # 
+    # 
+    # png(paste0(basepath, gene, ".png"), width = 300, height = 300)
+    # print(plot)
+    # dev.off()
+  }
 }
+
+
+rsq_df <- rsq_df[order(-rsq_df$rsquare),]
+
+# for(gene in rsq_df$gene[1:30]){
+for(i in 1 : 30) {
+
+  if (rsq_df$rsquare[i] >= 0.2) {
+    print(paste0("COUNT",i))
+    gene <- rsq_df$gene[i]
+    message(gene)
+    
+    count <- unique(day115_125_gene_expression_data[,gene])
+    
+    count_df <- data.frame("count" = count, percent = rep(0, length(count)), logodds = rep(0, length(count)))
+    
+    message('Count df created')
+    
+    for(n in unique(count_df$count)){
+      # count for all astrocytes
+      n_astrocytes <- sum(day115_125_gene_expression_data[day115_125_gene_expression_data$Main_cluster_name == "Astrocytes",gene]==n)
+      
+      # probability of a cell being an astrocyte
+      # number of astrocytes w unique count value for spp1 / all cells
+      percent <- n_astrocytes/ sum(day115_125_gene_expression_data[,gene]==n)
+      
+      # log odds
+      logodds <- log(percent/(1-percent))
+      
+      # adding all variables to count_df
+      count_df[count_df$count == n, "percent"] <- percent
+      count_df[count_df$count == n, "logodds"] <- logodds
+    }
+    # print(count_df)
+    # table(count_df$logodds==-Inf)
+    
+    count_df <- count_df[count_df$logodds != -Inf, ]
+    count_df <- count_df[count_df$logodds != Inf, ]
+    
+    if(nrow(count_df) >= 20){
+      
+      
+      # model <- lm(logodds ~ count, data = count_df)
+      # model_summary <- glance(model)
+      # r_squared <- model_summary$r.squared
+      # 
+      # rsq_df[rsq_df$gene==gene, "rsquare"] <- r_squared
+      
+      plot <- ggplot(count_df, aes(x = count, y = logodds)) +
+        geom_point(stat = "identity") + geom_smooth(method = "lm") +
+        ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
+      
+      
+      
+      png(paste0(basepath, gene, "TOP30",".png"), width = 300, height = 300)
+      print(plot)
+      dev.off()
+    }
+  }
+}
+

@@ -17,7 +17,7 @@ seuobj_atrt <- readRDS("/Users/saanviiyer/PRINT OPTICS/STUDY/SCRI_r/fetal_cerebe
 seuobj_dipg <- readRDS("/Users/saanviiyer/PRINT OPTICS/STUDY/SCRI_r/fetal_cerebellar_scData/seuobj_dipg.RDS")
 seuobj_mb <- readRDS("/Users/saanviiyer/PRINT OPTICS/STUDY/SCRI_r/fetal_cerebellar_scData/seuobj_mb.RDS")
 
-#Visualization for developmental days=============
+# visualization for developmental days---------
 DimPlot(seuobj89, reduction = "umap", group.by = "Main_cluster_name")
 DimPlot(seuobj89, reduction = "umap", group.by = "sub_cluster_name")
 
@@ -86,7 +86,6 @@ tumors.seuobj <- IntegrateData(anchorset = tumors.anchors)
 
 #running standard analysis workflow
 tumors.seuobj <- NormalizeData(tumors.seuobj)
-
 tumors.seuobj <- FindVariableFeatures(tumors.seuobj)
 tumors.seuobj <- RunFastMNN(object.list = SplitObject(tumors.seuobj, split.by = "orig.ident"))
 tumors.seuobj <- ScaleData(tumors.seuobj)
@@ -145,7 +144,6 @@ FeaturePlot(tumors.seuobj, features = SLC24A4_PEX5L.genes, reduction = "umap", m
 FeaturePlot(tumors.seuobj, features = vascular_endothelial.genes, reduction = "umap", min.cutoff="q1")
 FeaturePlot(tumors.seuobj, features = astrocyte.genes, reduction = "umap", min.cutoff="q1")
 FeaturePlot(tumors.seuobj, features = granule_neuron.genes, reduction = "umap", min.cutoff="q1")
-tumors.seuobj@active.assay = "RNA"
 FeaturePlot(tumors.seuobj, features = purkinje_neuron.genes, reduction = "umap", min.cutoff="q1")
 FeaturePlot(tumors.seuobj, features = inhibitory_interneuron.genes, reduction = "umap", min.cutoff="q1")
 FeaturePlot(tumors.seuobj, features = unipolar_brush.genes, reduction = "umap", min.cutoff="q1")
@@ -181,19 +179,6 @@ tumors.seuobj <- AddModuleScore(tumors.seuobj, features = list("celltype"=microg
 
 ##visualization of module scores
 #Dot Plot
-
-colnames(tumors.seuobj@meta.data) <- gsub("purkinje_neuron1", "purkinje_neuron", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("oligodendrocyte1", "oligodendrocyte", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("SLC24A4_PEX5L1", "SLC24A4_PEX5L", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("vascular_endothelial1", "vascular_endothelial", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("astrocyte1", "astrocyte", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("granule_neuron1", "granule_neuron", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("inhibitory_interneuron1", "inhibitory_interneuron", colnames(tumors.seuobj@meta.data ))
-colnames(tumors.seuobj@meta.data) <- gsub("microglia1", "microglia", colnames(tumors.seuobj@meta.data ))
-
-
-colnames(tumors.seuobj@meta.data) <- gsub("unipolar_brush1", "unipolar_brush", colnames(tumors.seuobj@meta.data ))
-
 DotPlot(tumors.seuobj, features = c("purkinje_neuron", "oligodendrocyte", "SLC24A4_PEX5L", "vascular_endothelial", "astrocyte", "granule_neuron", "inhibitory_interneuron", "unipolar_brush", "microglia"), group.by = "mnn.reconstructed_snn_res.0.8") + RotatedAxis()
 
 cell_types <- c("purkinje_neuron", "oligodendrocyte", "SLC24A4_PEX5L", "vascular_endothelial", "astrocyte", "granule_neuron", "inhibitory_interneuron", "unipolar_brush", "microglia")

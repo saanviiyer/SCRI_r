@@ -1,4 +1,4 @@
-# load libraries-----------------
+# load libraries
 library(dplyr)
 library(Seurat)
 library(patchwork)
@@ -30,10 +30,10 @@ subsets.seuobj <- IntegrateData(anchorset = subsets.anchors)
 
 subsets.seuobj <- NormalizeData(subsets.seuobj)
 subsets.seuobj <- FindVariableFeatures(subsets.seuobj, selection.method = "vst", nfeatures = 2000)
-#Scaling---------------------------------------------------
+#Scaling-
 all.genes <- rownames(subsets.seuobj)
 subsets.seuobj <- ScaleData(subsets.seuobj, features = all.genes)
-#PCA--------------------------------------------------------
+#PCA
 subsets.seuobj <- RunPCA(subsets.seuobj, features = VariableFeatures(object = subsets.seuobj))
 
 #creating data frame of gene expression data
@@ -172,4 +172,116 @@ for(i in 1 : 30) {
     }
   }
 }
+# 
+# # creating top_genes_logodds
+# top_genes_logodds <- c()
+# 
+# # populating top_genes_logodds with top genes
+# for(i in 1 : 30) {
+# 
+#   if (rsq_df$rsquare[i] >= 0.2) {
+#     top_genes_logodds <- append(top_genes_logodds, rsq_df$gene[i])
+#   }
+# }
+# 
+# day115_125_gene_expression_data$cellid <- rownames(day115_125_gene_expression_data)
+# 
+# # split 75% training data
+# training.data <- day115_125_gene_expression_data %>%
+#   group_by(Main_cluster_name) %>%
+#   filter(row_number() <= 0.75 * n())
+# 
+# # all data not in training wil lbe used for testing
+# testing.data <- day115_125_gene_expression_data[!day115_125_gene_expression_data$cellid %in% training.data$cellid,]
+# 
+# rownames(training.data) <- training.data$cellid
+# rownames(testing.data) <- testing.data$cellid
+# 
+# training.data$cellid <- NULL
+# testing.data$cellid <- NULL
+# 
+# # creating top genes from each
+# training.data.topgenes <- training.data[,c(top_genes_logodds, "Main_cluster_name")]
+# testing.data.topgenes <- testing.data[,c(top_genes_logodds, "Main_cluster_name")]
+# 
+# # training.data.topgenes$Main_cluster_name <- 
+# 
+# training.data.topgenes$celltype <- 0
+# training.data.topgenes$celltype[training.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+# 
+# testing.data.topgenes$celltype <- 0
+# testing.data.topgenes$celltype[testing.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+# 
+# training.data.topgenes$Main_cluster_name = NULL
+# testing.data.topgenes$Main_cluster_name = NULL
+# 
+# # training GLM with 0.75 GE data
+# model_lm <- glm(celltype ~. , data = training.data.topgenes, family = "binomial")
+# 
+# # testing GLM with 0.25 GE data
+# predictions <- model_lm %>% predict(testing.data.topgenes)
+# 
+# # determining the model performance
+# performance <- data.frame(
+#   RMSE = RMSE(predictions, testing.data.topgenes$celltype),
+#   R2 = R2(predictions, testing.data.topgenes$celltype)
+# )
+#   
+# summary(model_lm)  
 
+#getting the top genes from rsq_)df
+topgenes_logodds <- c()
+for(i in 1 : 30) {
+  if (rsq_df$rsquare[i] >= 0.2) {
+    topgenes_logodds <- append(topgenes_logodds, rsq_df$gene[i])
+  }
+}
+
+#load dplyr
+library(dplyr)
+
+#making the cell id columns the same as the rownames
+day115_125_gene_expression_data$cellid <- rownames(day115_125_gene_expression_data)
+
+#making the training dat groping by main clusrter name and filtering out
+training.data <- day115_125_gene_expression_data %>%
+  group_by(Main_cluster_name) %>%
+  filter(row_number() <= 0.75 * n())
+
+#making testing data from everything that isn't training
+testing.data <- day115_125_gene_expression_data[!day115_125_gene_expression_data$cellid %in% training.data$cellid, ]
+
+rownames(training.data) <- training.data$cellid
+rownames(testing.data) <- testing.data$cellid
+
+training.data$cellid <- NULL
+testing.data$cellid <- NULL
+
+
+#creating top genes from each
+training.data.topgenes <- training.data[, c(topgenes_logodds, "Main_cluster_name")]
+testing.data.topgenes <- testing.data[, c(topgenes_logodds, "Main_cluster_name")]
+
+#creating binary predcictor column (astrocyte = 1, other = 0)
+training.data.topgenes$celltype <- 0
+training.data.topgenes$celltype[training.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+
+testing.data.topgenes$celltype <- 0
+testing.data.topgenes$celltype[testing.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+
+training.data.topgenes$Main_cluster_name <- NULL
+testing.data.topgenes$Main_cluster_name <- NULL
+
+
+#training glm with 0.75 GE data
+model_lm <- glm(celltype ~. , data = training.data.topgenes, family = "binomial")
+
+#testing GLM with 0.25 GE data
+predictions <- model_lm %>% predict(testing.data.topgenes)
+
+#determining the model performance
+performance <- data.frame(RMSE = RMSE(predictions, testing.data.topgenes$celltype),
+                          R2 = R2(predictions, testing.data.topgenes$celltype))
+
+summary(model_lm)
+performance

@@ -783,7 +783,7 @@ day110_gene_expression_data$celltype <- 0
 day110_gene_expression_data$celltype[day110_gene_expression_data$Main_cluster_name == "Astrocytes"] <- 1
 
 # Making predictions
-probabilities <- model_lm %>% predict(day110_gene_expression_data, type = "response") 
+probabilities <- step.model.both %>% predict(day110_gene_expression_data, type = "response") 
 predicted.classes <- ifelse(probabilities > 0.6, 1, 0)
 
 
@@ -819,14 +819,15 @@ auc_testing_performance <- auc_testing_performance@y.values
 
 tuning_metrics_df <- data.frame(cutoffs=NA, f_measure=NA, precision=NA, recall=NA)
 
+
 beta <- 0.1
-for(cutoff in seq(0.1, 1, 0.1)) { # switch 0.1 to 0.01
+for(cutoff in seq(0.2, 1, 0.1)) { # switch 0.1 to 0.01
   predicted.classes <- ifelse(adj_prob > cutoff, 1, 0) # adj prob to change
   conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
   
   TP <- conf_matrix$table[4]
   TN <- conf_matrix$table[1]
-  FP <- conf_matrix$stable[3]
+  FP <- conf_matrix$table[3]
   FN <- conf_matrix$table[2]
   
   precision <- TP/(TP+FP)
@@ -835,6 +836,8 @@ for(cutoff in seq(0.1, 1, 0.1)) { # switch 0.1 to 0.01
   f_measure <- (1+beta**2) * ( (precision*recall) / ((beta**2 * precision)+recall))
   
   tuning_metrics_df <- rbind(tuning_metrics_df, c(cutoff, f_measure, precision, recall))
-  
 }
+
+tuning_metrics_df_model_lm <- tuning_metrics_df
+
 

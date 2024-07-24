@@ -320,7 +320,7 @@ summary(step.model.backward)
 step.model.both <- stepAIC(model_lm, direction = "both", trace = 10)
 summary(step.model.both)
 
-# NEURONAL MODEL ---------------------
+# NEURONAL MODEL
 
 
 # log plots
@@ -763,7 +763,6 @@ day110_gene_expression_data <- (round(day110_gene_expression_data, 2))
 # add cell id col to metadata of seuobj
 seuobj110$cellid <- rownames(seuobj110@meta.data)
 
-
 # making a metadata dataframe of seuobj with main cluster and cell id
 metadata_df <- seuobj110@meta.data[, c("Main_cluster_name", "cellid")]
 
@@ -791,3 +790,27 @@ predicted.classes <- ifelse(probabilities > 0.6, 1, 0)
 # determining accuracy
 table(predicted.classes == day110_gene_expression_data$celltype)
 confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
+
+#------------------------
+# original odds = number of astrocytes / number of not-astrocytes in training data
+orig_odds = (72266/217612)
+# undersample odds <- number of astrocytes / number of not-astrocytes in undersampled data
+undersampled_odds <- (sum(training.data$Main_cluster_name == "Astrocytes")/(sum(training.data$Main_cluster_name != "Astrocytes")))
+# scoring odds = predicted probabilities / (1-predicted probabilities)
+scoring_odds <- (probabilities) / (1-probabilities)
+# adjusted odds = scoring odds * original odds / undersampled odds
+adj_odds = scoring_odds * orig_odds / undersampled_odds
+# adjusted probability = 1 / (1 + (1 / adjusted odds))
+adj_prob = 1 / (1 + (1 / adj_odds))
+# adjust our predictions with adjusted probabilities
+predicted.classes <- ifelse(adj_prob > 0.6, 1, 0) # adj prob to change
+conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
+
+## calculating AUC / ROC
+
+roc_testing_prediction <- prediction(adj_prob, day110_gene_expression_data$celltype)
+roc_testing_performance <- performance(roc_testing_prediction, "tpr", "fpr")
+
+auc_testing_performance <- performance(roc_testing_prediction, measure="auc")
+
+

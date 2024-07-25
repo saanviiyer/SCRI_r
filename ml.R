@@ -184,35 +184,35 @@ for(i in 1 : 30) {
 }
 # 
 # # creating top_genes_logodds
-# top_genes_logodds <- c()
-# 
-# # populating top_genes_logodds with top genes
-# for(i in 1 : 30) {
-# 
-#   if (rsq_df$rsquare[i] >= 0.2) {
-#     top_genes_logodds <- append(top_genes_logodds, rsq_df$gene[i])
-#   }
-# }
-# 
-# day115_125_gene_expression_data$cellid <- rownames(day115_125_gene_expression_data)
-# 
-# # split 75% training data
-# training.data <- day115_125_gene_expression_data %>%
-#   group_by(Main_cluster_name) %>%
-#   filter(row_number() <= 0.75 * n())
-# 
-# # all data not in training wil lbe used for testing
-# testing.data <- day115_125_gene_expression_data[!day115_125_gene_expression_data$cellid %in% training.data$cellid,]
-# 
-# rownames(training.data) <- training.data$cellid
-# rownames(testing.data) <- testing.data$cellid
-# 
-# training.data$cellid <- NULL
-# testing.data$cellid <- NULL
-# 
+top_genes_logodds <- c()
+
+# populating top_genes_logodds with top genes
+for(i in 1 : 30) {
+
+  if (rsq_df$rsquare[i] >= 0.2) {
+    top_genes_logodds <- append(top_genes_logodds, rsq_df$gene[i])
+  }
+}
+
+day115_125_gene_expression_data$cellid <- rownames(day115_125_gene_expression_data)
+
+# split 75% training data
+training.data <- day115_125_gene_expression_data %>%
+  group_by(Main_cluster_name) %>%
+  filter(row_number() <= 0.75 * n())
+
+# all data not in training wil lbe used for testing
+testing.data <- day115_125_gene_expression_data[!day115_125_gene_expression_data$cellid %in% training.data$cellid,]
+
+rownames(training.data) <- training.data$cellid
+rownames(testing.data) <- testing.data$cellid
+
+training.data$cellid <- NULL
+testing.data$cellid <- NULL
+
 # # creating top genes from each
-# training.data.topgenes <- training.data[,c(top_genes_logodds, "Main_cluster_name")]
-# testing.data.topgenes <- testing.data[,c(top_genes_logodds, "Main_cluster_name")]
+training.data.topgenes <- training.data[,c(top_genes_logodds, "Main_cluster_name")]
+testing.data.topgenes <- testing.data[,c(top_genes_logodds, "Main_cluster_name")]
 # 
 # # training.data.topgenes$Main_cluster_name <- 
 # 
@@ -535,11 +535,11 @@ training.data.topgenes <- training.data[, c(topgenes_logodds, "Main_cluster_name
 testing.data.topgenes <- testing.data[, c(topgenes_logodds, "Main_cluster_name")]
 
 #creating binary predictor column (astrocyte = 1, other = 0)
-training.data.topgenes$celltype <- 0
-training.data.topgenes$celltype[training.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+training.data.topgenes$celltype <- 1
+training.data.topgenes$celltype[training.data.topgenes$Main_cluster_name == "Astrocytes"] <- 0
 
-testing.data.topgenes$celltype <- 0
-testing.data.topgenes$celltype[testing.data.topgenes$Main_cluster_name == "Astrocytes"] <- 1
+testing.data.topgenes$celltype <- 1
+testing.data.topgenes$celltype[testing.data.topgenes$Main_cluster_name == "Astrocytes"] <- 0
 
 training.data.topgenes$Main_cluster_name <- NULL
 testing.data.topgenes$Main_cluster_name <- NULL
@@ -578,7 +578,6 @@ summary(step.model.backward)
 step.model.both <- stepAIC(model_lm, direction = "both", trace = 10)
 summary(step.model.both)
 
-----------------------------------
 #   
 #   #workflow for neurons
 #   
@@ -778,11 +777,11 @@ day110_gene_expression_data <- cbind(day110_gene_expression_data, metadata_df)
 # removing the cell id from the expression dataframe
 day110_gene_expression_data$cellid <- NULL
 
+# switching positives for model - predict astrocyte
+day110_gene_expression_data$celltype <- 1
+day110_gene_expression_data$celltype[day110_gene_expression_data$Main_cluster_name == "Astrocytes"] <- 0
 
-day110_gene_expression_data$celltype <- 0
-day110_gene_expression_data$celltype[day110_gene_expression_data$Main_cluster_name == "Astrocytes"] <- 1
-
-# Making predictions
+# Making predictions with step.model.both
 probabilities <- step.model.both %>% predict(day110_gene_expression_data, type = "response") 
 predicted.classes <- ifelse(probabilities > 0.6, 1, 0)
 
@@ -809,22 +808,26 @@ conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_d
 ## calculating AUC / ROC
 
 roc_testing_prediction <- prediction(adj_prob, day110_gene_expression_data$celltype)
+
+# analyzing performance with true positive rate and false positive rate
 roc_testing_performance <- performance(roc_testing_prediction, "tpr", "fpr")
 
+# evaluating area under curve
 auc_testing_performance <- performance(roc_testing_prediction, measure="auc")
 
-saveRDS(model_lm, file=paste0(basepath, "astrocyte_model.RDS"))
+saveRDS(step.model.both, file=paste0(basepath, "astrocyte_model.RDS"))
 
 auc_testing_performance <- auc_testing_performance@y.values
 
+# metrics for further analysis
 tuning_metrics_df <- data.frame(cutoffs=NA, f_measure=NA, precision=NA, recall=NA)
-
 
 beta <- 0.1
 for(cutoff in seq(0.2, 1, 0.1)) { # switch 0.1 to 0.01
   predicted.classes <- ifelse(adj_prob > cutoff, 1, 0) # adj prob to change
   conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
   
+  # calculate 
   TP <- conf_matrix$table[4]
   TN <- conf_matrix$table[1]
   FP <- conf_matrix$table[3]
@@ -833,11 +836,13 @@ for(cutoff in seq(0.2, 1, 0.1)) { # switch 0.1 to 0.01
   precision <- TP/(TP+FP)
   recall <- TP/(TP+FN)
   
-  f_measure <- (1+beta**2) * ( (precision*recall) / ((beta**2 * precision)+recall))
+  f_measure <- ((1+beta**2) *  (precision*recall)) / ((beta**2 * precision)+recall)
   
   tuning_metrics_df <- rbind(tuning_metrics_df, c(cutoff, f_measure, precision, recall))
 }
 
-tuning_metrics_df_model_lm <- tuning_metrics_df
+df <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
+
+ggplot(df, aes(x=cutoffs, y=value, color=metric)) + geom_point()
 
 

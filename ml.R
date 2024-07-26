@@ -821,25 +821,56 @@ auc_testing_performance <- auc_testing_performance@y.values
 
 # metrics for further analysis
 tuning_metrics_df <- data.frame(cutoffs=NA, f_measure=NA, precision=NA, recall=NA)
+# 
+# beta <- 0.1
+# for(cutoff in seq(0.2, 1, 0.1)) { # switch 0.1 to 0.01
+#   predicted.classes <- ifelse(adj_prob > cutoff, 1, 0) # adj prob to change
+#   conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
+#   
+#   # calculate 
+#   TP <- conf_matrix$table[4]
+#   TN <- conf_matrix$table[1]
+#   FP <- conf_matrix$table[3]
+#   FN <- conf_matrix$table[2]
+#   
+#   precision <- TP/(TP+FP)
+#   recall <- TP/(TP+FN)
+#   
+#   f_measure <- ((1+beta**2) *  (precision*recall)) / ((beta**2 * precision)+recall)
+#   
+#   tuning_metrics_df <- rbind(tuning_metrics_df, c(cutoff, f_measure, precision, recall))
+# }
 
-beta <- 0.1
-for(cutoff in seq(0.2, 1, 0.1)) { # switch 0.1 to 0.01
-  predicted.classes <- ifelse(adj_prob > cutoff, 1, 0) # adj prob to change
-  conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
-  
-  # calculate 
-  TP <- conf_matrix$table[4]
-  TN <- conf_matrix$table[1]
-  FP <- conf_matrix$table[3]
-  FN <- conf_matrix$table[2]
-  
-  precision <- TP/(TP+FP)
-  recall <- TP/(TP+FN)
-  
-  f_measure <- ((1+beta**2) *  (precision*recall)) / ((beta**2 * precision)+recall)
-  
-  tuning_metrics_df <- rbind(tuning_metrics_df, c(cutoff, f_measure, precision, recall))
+TuningMetrics.fn <- function(beta, adjusted_probability, seuobj110){
+  for(cutoff in seq(0.2, 0.9, 0.05)){ # switch 0.1 to 0.01
+    predicted.classes <- ifelse(adjusted_probability > cutoff, 1, 0 )
+    conf_matrix <- confusionMatrix(table(predicted.classes, seuobj110[["celltype"]]))
+    
+    TP <- conf_matrix$table[4]
+    TN <- conf_matrix$table[1]
+    FP <- conf_matrix$table[3]
+    FN <- conf_matrix$table[2]
+    
+    precision <- TP/(TP + FP)
+    recall <- TP/ (TP + FN)
+    
+    f_measure <- (1+beta**2) * ( (precision * recall) / ((beta**2 * precision) + recall) )
+    
+    
+    tuning_metrics_df <- rbind(tuning_metrics_df, c(cutoff, f_measure, precision, recall))
+    return(tuning_metrics_df)
+  }
 }
+
+tuning_metrics_df_b01 <- TuningMetrics.fn(beta=0.1, adj_prob, day110_gene_expression_data)
+df <- tuning_metrics_df_b01 %>% gather(metric, value, f_measure:recall)
+ggplot(df, aes(x=cutoffs, y=value, color=metric)) + geom_point()
+
+tuning_metrics_df_b01 <- TuningMetrics.fn(beta=0.1, adj_prob, day110_gene_expression_data)
+tuning_metrics_df_b05 <- TuningMetrics.fn(beta=0.5, adj_prob, day110_gene_expression_data)
+tuning_metrics_df_b1 <- TuningMetrics.fn(beta=1, adj_prob, day110_gene_expression_data)
+tuning_metrics_df_b1.5 <- TuningMetrics.fn(beta=1.5, adj_prob, day110_gene_expression_data)
+tuning_metrics_df_b2 <- TuningMetrics.fn(beta=2, adj_prob, day110_gene_expression_data)
 
 df <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
 

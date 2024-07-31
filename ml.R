@@ -11,7 +11,7 @@ library(broom)
 library(ggpmisc)
 library(nlme)
 
-basepath <- "/Users/saanviiyer/Documents/GitHub/SCRI_r/LogOdds_Plots_Astrocytes/"
+basepath <- "/Users/saanviiyer/Documents/GitHub/SCRI_r/0.4+/"
 
 # create integrated object
 
@@ -71,6 +71,7 @@ count_df <- data.frame(count=count, percent=rep(NA, length(count)), logodds=rep(
 
 rsq_df <- data.frame(gene=colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_expression_data) != "Main_cluster_name"],
                      rsquare=rep(NA, 2000))
+rsq_df
 
 for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_expression_data) != "Main_cluster_name"]){
   
@@ -102,7 +103,7 @@ for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_e
   
   count_df <- count_df[count_df$logodds != -Inf, ]
   count_df <- count_df[count_df$logodds != Inf, ]
-  if(nrow(count_df) >= 20){
+  if(nrow(count_df) >= 10){
     
     
     model <- lm(logodds ~ count, data = count_df)
@@ -125,10 +126,12 @@ for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_e
 
 
 rsq_df <- rsq_df[order(-rsq_df$rsquare),]
+list_genes <- c()
 
 # for(gene in rsq_df$gene[1:30]){
-for(i in 1 : 30) {
+for(i in 1 : 2000) {
 
+  
   if (rsq_df$rsquare[i] >= 0.4) {
     print(paste0("COUNT",i))
     gene <- rsq_df$gene[i]
@@ -141,6 +144,7 @@ for(i in 1 : 30) {
     message('Count df created')
     
     for(n in unique(count_df$count)){
+      print(n)
       # count for all astrocytes
       n_astrocytes <- sum(day115_125_gene_expression_data[day115_125_gene_expression_data$Main_cluster_name == "Astrocytes",gene]==n)
       
@@ -169,19 +173,22 @@ for(i in 1 : 30) {
       # r_squared <- model_summary$r.squared
       # 
       # rsq_df[rsq_df$gene==gene, "rsquare"] <- r_squared
-      
-      plot <- ggplot(count_df, aes(x = count, y = logodds)) +
-        geom_point(stat = "identity") + geom_smooth(method = "lm") +
-        ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
-      
-      
-      
-      png(paste0(basepath, gene, "TOP30",".png"), width = 300, height = 300)
-      print(plot)
-      dev.off()
+      list_genes = append(gene, list_genes)
+      # plot <- ggplot(count_df, aes(x = count, y = logodds)) +
+      #   geom_point(stat = "identity") + geom_smooth(method = "lm") +
+      #   ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
+      # 
+      # 
+      # 
+      # png(paste0(basepath, gene, "TOP30",".png"), width = 300, height = 300)
+      # print(plot)
+      # dev.off()
     }
+    message("loop completed")
   }
 }
+
+list_genes
 # 
 # # creating top_genes_logodds
 top_genes_logodds <- c()
@@ -249,7 +256,19 @@ for(i in 1 : 30) {
 
 newgenes <- c("S100B", "GFAP", "APOE", "AQP4")
 
-topgenes_logodds <- append(topgenes_logodds, newgenes)
+for (gene in newgenes) {
+  plot <- ggplot(count_df, aes(x = count, y = logodds)) +
+    geom_point(stat = "identity") + geom_smooth(method = "lm") +
+    ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
+  
+  
+  
+  png(paste0(basepath, gene, ".png"), width = 300, height = 300)
+  print(plot)
+  dev.off()
+  
+  topgenes_logodds <- append(topgenes_logodds, newgenes)
+}
 
 #load dplyr
 library(dplyr)
@@ -369,15 +388,15 @@ for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_e
     
     rsq_df[rsq_df$gene==gene, "rsquare"] <- r_squared
     
-    # plot <- ggplot(count_df, aes(x = count, y = logodds)) +
-    #   geom_point(stat = "identity") + geom_smooth(method = "lm") +
-    #   ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
-    # 
-    # 
-    # 
-    # png(paste0(basepath, gene, ".png"), width = 300, height = 300)
-    # print(plot)
-    # dev.off()
+    plot <- ggplot(count_df, aes(x = count, y = logodds)) +
+      geom_point(stat = "identity") + geom_smooth(method = "lm") +
+      ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
+
+
+
+    png(paste0(basepath, gene, ".png"), width = 300, height = 300)
+    print(plot)
+    dev.off()
   }
 }
 
@@ -783,7 +802,7 @@ day110_gene_expression_data$celltype[day110_gene_expression_data$Main_cluster_na
 
 # Making predictions with step.model.both
 probabilities <- step.model.both %>% predict(day110_gene_expression_data, type = "response") 
-predicted.classes <- ifelse(probabilities > 0.6, 1, 0)
+predicted.classes <- ifelse(probabilities > 0.2, 1, 0)
 
 
 # determining accuracy
@@ -802,7 +821,7 @@ adj_odds = scoring_odds * orig_odds / undersampled_odds
 # adjusted probability = 1 / (1 + (1 / adjusted odds))
 adj_prob = 1 / (1 + (1 / adj_odds))
 # adjust our predictions with adjusted probabilities
-predicted.classes <- ifelse(adj_prob > 0.6, 1, 0) # adj prob to change
+predicted.classes <- ifelse(adj_prob > 0.2, 1, 0) # adj prob to change
 conf_matrix <- confusionMatrix(table(predicted.classes, day110_gene_expression_data$celltype))
 
 ## calculating AUC / ROC
@@ -872,8 +891,19 @@ tuning_metrics_df_b1 <- TuningMetrics.fn(beta=1, adj_prob, day110_gene_expressio
 tuning_metrics_df_b1.5 <- TuningMetrics.fn(beta=1.5, adj_prob, day110_gene_expression_data)
 tuning_metrics_df_b2 <- TuningMetrics.fn(beta=2, adj_prob, day110_gene_expression_data)
 
+seuobj110@meta.data$predicted_astrocytes_temp <- predicted.classes
+
+# switching from wide to long dataframe
 df <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
+tuning_metrics_df_b05 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
+tuning_metrics_df_b1 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
+tuning_metrics_df_b2 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
 
-ggplot(df, aes(x=cutoffs, y=value, color=metric)) + geom_point()
 
+ggplot(tuning_metrics_df_b05, aes(x=cutoffs, y=value, color=metric)) + geom_point()
+ggplot(tuning_metrics_df_b1, aes(x=cutoffs, y=value, color=metric)) + geom_point()
+ggplot(tuning_metrics_df_b2, aes(x=cutoffs, y=value, color=metric)) + geom_point()
 
+predicted.classes <- (adj_prob > 0.2)
+seuobj110@meta.data$predicted_astrocytes_temp <- predicted.classes
+DimPlot(seuobj110, reduction="umap", group.by = "predicted_astrocytes_temp", label = TRUE)

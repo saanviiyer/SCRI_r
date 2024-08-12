@@ -543,6 +543,9 @@ TuningMetrics.fn <- function(beta, adjusted_probability, seuobj110){
   }
 }
 
+saveRDS(step.model.both, file=paste0(basepath, "gn_model.RDS"))
+
+
 tuning_metrics_df_b01 <- TuningMetrics.fn(beta=0.1, adj_prob, day110_gene_expression_data)
 df <- tuning_metrics_df_b01 %>% gather(metric, value, f_measure:recall)
 ggplot(df, aes(x=cutoffs, y=value, color=metric)) + geom_point()

@@ -130,7 +130,7 @@ list_genes <- c()
 
 # for(gene in rsq_df$gene[1:30]){
 for(i in 1 : 2000) {
-
+  
   
   if (rsq_df$rsquare[i] >= 0.4) {
     print(paste0("COUNT",i))
@@ -195,7 +195,7 @@ top_genes_logodds <- c()
 
 # populating top_genes_logodds with top genes
 for(i in 1 : 30) {
-
+  
   if (rsq_df$rsquare[i] >= 0.2) {
     top_genes_logodds <- append(top_genes_logodds, rsq_df$gene[i])
   }
@@ -366,9 +366,9 @@ for(gene in colnames(day115_125_gene_expression_data)[colnames(day115_125_gene_e
     plot <- ggplot(count_df, aes(x = count, y = logodds)) +
       geom_point(stat = "identity") + geom_smooth(method = "lm") +
       ggtitle(paste0("Log odds for ", gene, "\n(Astrocytes)")) + stat_poly_eq(use_label(c("eq", "R2")))
-
-
-
+    
+    
+    
     png(paste0(basepath, gene, ".png"), width = 300, height = 300)
     print(plot)
     dev.off()

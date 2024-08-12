@@ -586,6 +586,8 @@ TuningMetrics.fn <- function(beta, adjusted_probability, seuobj110){
   }
 }
 
+saveRDS(step.model.both, file=paste0(basepath, "olig_model.RDS"))
+
 tuning_metrics_df_b01 <- TuningMetrics.fn(beta=0.1, adj_prob, day110_gene_expression_data)
 df <- tuning_metrics_df_b01 %>% gather(metric, value, f_measure:recall)
 ggplot(df, aes(x=cutoffs, y=value, color=metric)) + geom_point()
@@ -603,6 +605,8 @@ df <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
 tuning_metrics_df_b05 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
 tuning_metrics_df_b1 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
 tuning_metrics_df_b2 <- tuning_metrics_df %>% gather(metric, value, f_measure:recall)
+
+
 
 ggplot(tuning_metrics_df_b05, aes(x=cutoffs, y=value, color=metric)) + geom_point()
 ggplot(tuning_metrics_df_b1, aes(x=cutoffs, y=value, color=metric)) + geom_point()

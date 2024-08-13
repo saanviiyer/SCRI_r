@@ -32,7 +32,8 @@ seuobj_115_125 <- ScaleData(seuobj_115_125, features = all.genes)
 #PCA
 seuobj_115_125 <- RunPCA(seuobj_115_125, features = VariableFeatures(object = seuobj_115_125))
 
-saveRDS(seuobj_115_125, file = "day115_125.rds")
+saveRDS(seuobj_115_125, file = "day115_125.RDS")
+seuobj_115_125 <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/day115_125.RDS")
 
 #creating data frame of gene expression data
 day115_125_gene_expression_data <- as.data.frame(seuobj_115_125@assays$integrated$data)
@@ -304,12 +305,6 @@ scoring_odds <- probabilities/(1-probabilities)
 adjusted_odds <- scoring_odds * (original_odds/undersample_odds)
 
 adjusted_probability = 1/(1+(1/adjusted_odds))
-
-
-
-
-
-
 
 #adjust our predictions with adjusted probabilites
 predicted.classes <- ifelse(adjusted_probability > 0.6, 1, 0) #adjusted prob to change

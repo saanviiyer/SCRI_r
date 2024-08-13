@@ -15,13 +15,13 @@ astrocyte_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/astrocy
 olig_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Oligodendrocyte_rf.RDS")
 ii_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Inhibitory_interneuronrf.RDS")
 microglia_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Microglia_rf.RDS")
-gn_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Granule_neuronrf.RDS")
+gn_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/gnrf.RDS")
 pn_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Purkinje_neuron_rf.RDS")
 ubc_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Unipolar_brush_cell_rf.RDS")
 vec_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/Vascular_endothelial_cell_rf.RDS")
 slc_model <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/SLC24A4_PEX5L_positive_cell_rf.RDS")
 
-models <- list("Astrocytes" = astrocyte_model, 
+models_list <- list("Astrocytes" = astrocyte_model, 
                "Inhibitory interneurons" = ii_model, 
                "Unipolar brush cells" = ubc_model, 
                "Oligodendrocytes" = olig_model,
@@ -31,9 +31,13 @@ models <- list("Astrocytes" = astrocyte_model,
                "Purkinje neurons" = pn_model,
                "SLC24A4_PEX5L positive cells" = slc_model)
 
-#day 110 data frame
+
+
+
+#day 110 dat frame
 
 #testing with day110 astrocyte model
+
 
 day110_gene_expression_data <- as.data.frame(seuobj110@assays$RNA$data)
 day110_gene_expression_data <- mutate_all(day110_gene_expression_data, function(x) as.numeric(as.character(x)))
@@ -90,7 +94,7 @@ original_odds <- 72266/217612
 # 
 # adjusted_probability = 1/(1+(1/adjusted_odds))
 
-seuobj_115_125 <- readRDS("/Users/saanviiyer/Documents/GitHub/SCRI_r/RF/day115_125.RDS")
+seuobj_115_125 <- readRDS("/Users/kaustubhgrama/Desktop/Computer_Science/R/Data/fetal_cerebellar_scData/seuobj_115_125.RDS")
 
 #creating data frame of gene expression data
 day115_125_gene_expression_data <- as.data.frame(seuobj_115_125@assays$integrated$data)
@@ -126,18 +130,22 @@ day115_125_gene_expression_data <- cbind(day115_125_gene_expression_data, metada
 # removing the cell id from the expression dataframe
 day115_125_gene_expression_data$cellid <- NULL
 
+#making the training dat groping by main cluste name and filtering out
 training.data <- day115_125_gene_expression_data %>%
   group_by(Main_cluster_name) %>%
   filter(row_number() <= 0.75 * n())
 
-training.data$Main_cluster_name <- as.factor(training.data$Main_cluster_name)
 
-for(i in names(models)){
+
+
+
+
+
+for(i in names(model_list)){
   
-  # probabilities <- predict(models[[i]], newdata = day110_gene_expression_data, type = "prob")[,2]
-  models[[i]] <- randomForest(Main_cluster_name ~ ., data = training.data, ntree = 500, type = "classification")
-  probabilities <- predict(models[[i]], newdata = day110_gene_expression_data, type = "prob")[,2]
   
+  
+  probabilities <- model_list[[i]] %>% predict(day110_gene_expression_data, type = "response")
   undersample_odds <- sum(training.data$Main_cluster_name == i)/sum(training.data$Main_cluster_name != i)
   scoring_odds <- probabilities/(1-probabilities)
   adjusted_odds <- scoring_odds * (original_odds/undersample_odds)
@@ -147,38 +155,6 @@ for(i in names(models)){
   
   
   
-}
-
-
-training.data$Main_cluster_name <- as.factor(training.data$Main_cluster_name)
-
-# Fit the models outside the loop
-models <- list()
-for(i in unique(training.data$Main_cluster_name)) {
-  models[[i]] <- randomForest(Main_cluster_name == i ~ ., data = training.data, ntree = 10)
-}
-
-# Use the models inside the loop to predict
-for(i in names(models)) {
-  
-  # Predict probabilities for the positive class
-  probabilities <- predict(models[[i]], newdata = day110_gene_expression_data, type = "prob")[,2]
-  
-  # Calculate undersample odds
-  undersample_odds <- sum(training.data$Main_cluster_name == i) / sum(training.data$Main_cluster_name != i)
-  
-  # Calculate scoring odds
-  scoring_odds <- probabilities / (1 - probabilities)
-  
-  # Adjust the odds
-  adjusted_odds <- scoring_odds * (original_odds / undersample_odds)
-  
-  # Calculate adjusted probabilities
-  adjusted_probability <- 1 / (1 + (1 / adjusted_odds))
-  
-  # Create column name and store adjusted probabilities
-  colname <- paste(i, "probability")
-  seuobj110@meta.data[, colname] <- 1 - adjusted_probability
 }
 
 
@@ -194,10 +170,10 @@ df3 <- colnames(df3)[apply(df3,1,which.max)]
 seuobj110@meta.data$max_topic_day89 <- df3
 
 
-df4 <- seuobj110@meta.data[,grep("Day94_Topic_", colnames(seuobj110@meta.data))]
+df4 <- seuobj110@meta.data[,grep("Day110_Topic_", colnames(seuobj110@meta.data))]
 df4 <- colnames(df4)[apply(df4,1,which.max)]
 
-seuobj110@meta.data$max_topic_day94 <- df4
+seuobj110@meta.data$max_topic_day110 <- df4
 
 
 df5 <- seuobj110@meta.data[,grep("Topic__", colnames(seuobj110@meta.data))]
@@ -243,16 +219,16 @@ ggplot(plotdf, aes(fill=Var1, y=Freq, x=Var2)) +
 
 
 
-plotdf2 <- table(seuobj110$Main_cluster_name, seuobj110$max_topic_day94)
+plotdf2 <- table(seuobj110$Main_cluster_name, seuobj110$max_topic_day110)
 
 plotdf2 <- as.data.frame(plotdf2)
-plotdf2$Var2 <- gsub("Day94_", "", plotdf2$Var2)
+plotdf2$Var2 <- gsub("Day110_", "", plotdf2$Var2)
 plotdf2$Var2 <- factor(plotdf2$Var2, levels = 
                          mixedsort(unique(plotdf2$Var2)))
 
 ggplot(plotdf2, aes(fill=Var1, y=Freq, x=Var2)) + 
   geom_bar(position="fill", stat="identity") +
-  ggtitle("Main cluster name vs day 94 topics in day 110 data") +
+  ggtitle("Main cluster name vs day 110 topics in day 110 data") +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1))
 
 
